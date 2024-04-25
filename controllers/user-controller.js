@@ -1,0 +1,459 @@
+let User = require('../models/userModel');
+let Attendance = require('../models/attendanceModel')
+const fs = require('fs');
+const path = require('path');
+const userImagePath = path.join(__dirname,"../user_images/")
+const moment = require('moment')
+
+exports.create_user = async(req,res)=>{
+    try{
+
+        if(!req.file)
+            return res.status(400).send({type:'eImage', msg: "image should be uploaded"})
+
+        const imageBuffer = req.file.buffer
+        const imageName = Date.now()+"-"+req.file.originalname
+        fs.writeFileSync(userImagePath+imageName,imageBuffer)
+
+        const memberShipStart = req.body.memberShipStart;
+        const pack = req.body.pack;
+        const memberShipEnd = moment(memberShipStart).add(pack, 'months').toDate();
+        const memberShipNum = req.body.memberShipNum;
+
+
+        const user = new User({
+            fullName: req.body.fullName,
+            phone: req.body.phone,
+            memberShipStart: memberShipStart,
+            memberShipEnd: memberShipEnd,
+            image: process.env.USER_IMAGES_URL+imageName,
+            pack:pack,
+            memberShipNum
+        })
+
+        await user.save();
+
+        return res.status(201).send({type: "success", msg:"user created successfully"})
+        
+    }
+    catch (err) {
+        if (err.code === 11000 && err.keyPattern && err.keyPattern.phone) {
+            return res.status(400).send({type: "ePhone",  msg: "phone number already exist" });
+        } else if (err.code === 11000 && err.keyPattern && err.keyPattern.memberShipNum) {
+            return res.status(400).send({type: "eNum",  msg: "phone number already exist" });
+        } else {
+            return res.status(500).send({type: "errmsg",msg:err});
+        }
+    }
+}
+
+exports.updateUser = async (req, res) => {
+    try {
+
+        let imageName = ''
+        
+        const userId = req.params.userId; // Assuming userId is passed in the request parameters
+
+        const memberShipStart = req.body.memberShipStart;
+        const pack = req.body.pack;
+        const memberShipEnd = moment(memberShipStart).add(pack, 'months').toDate();
+        const memberShipNum = req.body.memberShipNum;
+
+        let updatedUser = null
+        if(req.file)
+        {
+            const imageBuffer = req.file.buffer
+            imageName = Date.now()+"-"+req.file.originalname
+            fs.writeFileSync(userImagePath+imageName,imageBuffer)
+
+            updatedUser = await User.findByIdAndUpdate(userId, {
+                $set: {
+                    fullName: req.body.fullName,
+                    phone: req.body.phone,
+                    memberShipStart: memberShipStart,
+                    memberShipEnd: memberShipEnd,
+                    memberShipNum,
+                    image: process.env.USER_IMAGES_URL+imageName,
+                    pack: req.body.pack
+                }
+            }, { new: true });
+    
+
+        }
+        else 
+        {
+            updatedUser = await User.findByIdAndUpdate(userId, {
+                $set: {
+                    fullName: req.body.fullName,
+                    phone: req.body.phone,
+                    memberShipStart: memberShipStart,
+                    memberShipEnd: memberShipEnd,
+                    memberShipNum,
+                    pack: req.body.pack
+                }
+            }, { new: true });
+    
+        }
+
+        
+        if (!updatedUser) {
+            return res.status(404).send({ type: "error", msg: "User not found" });
+        }
+
+        return res.status(200).send({ type: "success", msg: "User updated successfully", user: updatedUser });
+    } catch (err) {
+        if (err.code === 11000 && err.keyPattern && err.keyPattern.phone) {
+            return res.status(400).send({ type: "ePhone", msg: "Phone number already exists!! change number" });
+        } else {
+            return res.status(500).send({ type: "errmsg", msg: err.message });
+        }
+    }
+}
+
+
+exports.getUserWithId = async (req, res) => {
+    try {
+        let userId = req.params.userId;        
+        let data = await User.findOne({ _id: userId })
+        
+        let formattedMemberShipStart = moment(data.memberShipStart).format('YYYY-MM-DD');
+        let formattedMemberShipEnd = moment(data.memberShipEnd).format('YYYY-MM-DD');
+        let userDetails = {
+            fullName : data.fullName,
+            memberShipStart: formattedMemberShipStart,
+            memberShipEnd: formattedMemberShipEnd,
+            image: data.image,
+            phone: data.phone,
+            _id: data._id,
+            pack: data.pack,
+            memberShipNum: data.memberShipNum
+        }
+
+        return res.status(200).send({ userDetails});
+    } catch (err) {
+        return res.status(500).send({ type: "errmsg", msg:"such user not exist" });
+    }
+}
+
+exports.getAllUsers = async(req,res)=>{
+
+    try{
+        let allUsers = await User.find().sort({ memberShipStart: -1 }).lean()
+        allUsers = allUsers.map(user => {
+            return {
+                ...user,
+                memberShipStart:  user.memberShipStart.toISOString().split('T')[0],
+                memberShipEnd:  user.memberShipEnd.toISOString().split('T')[0],
+            };
+        })
+        return res.status(200).send({allUsers:allUsers})
+    }
+    catch(err)
+    {
+        return res.status(500).send({type: "errmsg",msg: "something went wrong"});
+    }
+}
+
+exports.deleteUser = async(req,res)=>{
+    try{
+        let userId = req.params.userId
+        let deleteRes = await User.findByIdAndDelete(userId);
+        return res.status(200).send(deleteRes)
+    }
+    catch(err)
+    {
+        return res.status(400).send(err)
+    }
+}
+
+exports.getUserWithPhone = async(req,res)=>{
+    try{
+
+        let today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
+        let phoneNo = req.params.userId
+        if(phoneNo.length !=10)
+            return res.status(400).send({type: "ePhone",  msg: "Number should have 10 digits" });
+
+        let type = req.params.type;
+        let userDetails = {}
+
+        if(type==='paid')
+        {
+            userDetails = await User.findOne({
+                memberShipEnd: { $gte: today },
+                phone: phoneNo
+            }).lean();
+            
+            if (userDetails) {
+                userDetails.memberShipEnd = userDetails.memberShipEnd.toISOString().split('T')[0];
+                userDetails.memberShipStart = userDetails.memberShipStart.toISOString().split('T')[0];
+
+            }
+        }
+        else if(type==='unpaid')
+        {
+            
+            userDetails = await  User.findOne({
+                memberShipEnd: { $lt: today },
+                phone: phoneNo
+            }).lean();
+            
+            if (userDetails) {
+                userDetails.memberShipEnd = userDetails.memberShipEnd.toISOString().split('T')[0];
+                userDetails.memberShipStart = userDetails.memberShipStart.toISOString().split('T')[0];
+
+            }
+        }
+        else if(type==='all')
+        {
+            userDetails = await User.findOne({ phone: phoneNo }).lean();
+            
+            if (userDetails) {
+                userDetails.memberShipEnd = userDetails.memberShipEnd.toISOString().split('T')[0];
+                userDetails.memberShipStart = userDetails.memberShipStart.toISOString().split('T')[0];
+            }
+
+        }
+        else return res.status(500).send({type: "errmsg", msg: err?.message || "something went wrong "});
+
+        if (!userDetails) {
+            return res.status(400).send({ type: "ePhone", msg: "User not found"});
+        }
+
+        return res.status(200).send({userDetails})
+    }
+    catch(err)
+    {
+        return res.status(500).send({type: "errmsg", msg: err?.message || "something went wrong "});
+    }
+}
+
+
+
+exports.markAttendance = async (req,res)=>{
+    try{
+        let phoneNo = req.body.phone
+        if(phoneNo.length !=10)
+            return res.status(400).send({type: "ePhone",  msg: "Number should have 10 digits" });
+
+        
+        const existingUser = await User.findOne({ phone: phoneNo });
+        if (!existingUser) {
+            return res.status(400).send({ type: "ePhone", msg: "Phone no not found" });
+        }
+
+        let today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
+        // let checkPlan = await User.findOne({
+        //     $and: [
+        //         { phone: phoneNo },
+        //         { memberShipEnd: { $lt: today } }
+        //     ]
+        // });
+
+        // console.log(checkPlan)
+        let date = moment().format()
+        let currDate = date.toString().split('T')[0] + 'T00:00:00.000+00:00'
+
+        const attn = await Attendance.findOne({ 
+            $and:[
+                {phone: phoneNo},
+                { attendanceDate: { $gte: currDate } }
+            ]
+        
+        });
+
+        if(attn)
+            return res.status(400).send({type: "ePhone",  msg: "Attendance already taken" });
+        
+        let localTime = moment().format()
+        localTime = localTime.toString().split('+')[0] + '.000+00:00' //give local time exactly
+        
+        let attendance = new Attendance({
+            fullName: existingUser.fullName,
+            phone: existingUser.phone,
+            image: existingUser.image,
+            memberShipStart: existingUser.memberShipStart,
+            memberShipEnd: existingUser.memberShipEnd,
+            pack: existingUser.pack,
+            attendanceDate:localTime,
+            memberShipNum: existingUser.memberShipNum
+        })
+        const attnData = await attendance.save()
+        return res.status(200).send({ attnData});
+    }
+    catch (err) {
+        
+            return res.status(500).send({type: "errmsg", msg: err?.message || "something went wrong "});
+
+    }
+}
+
+exports.getTodayAttendance = async (req,res)=>{
+    try{
+        
+        let date = moment().format()
+        let startDate = date.toString().split('T')[0] + 'T00:00:00.000+00:00'
+        let endDate =  date.toString().split('T')[0] + 'T23:59:59.999+00:00'
+        let users = await Attendance.find({
+            $and: [
+                { attendanceDate: { $gte: startDate } },
+                { attendanceDate: { $lte: endDate } }
+            ]
+        }).sort({ attendanceDate: -1 });
+
+        let today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+        
+        users = users.map(user => {
+
+            let paid = true
+            if(today>user.memberShipEnd)
+                paid=false
+            return {
+                ...user._doc,
+                paid,
+                attendanceDate: user.attendanceDate.toISOString().split('T')[0],
+                memberShipStart: user.memberShipStart.toISOString().split('T')[0],
+                memberShipEnd: user.memberShipEnd.toISOString().split('T')[0],
+                EntryTime: user.attendanceDate .toISOString().split('T')[1].split('.')[0],
+            };
+        });
+
+        return res.status(200).send({users:users})
+    }
+    catch(err){
+        console.log(err)
+        return res.status(400).send("something went wrong")
+    }
+}
+
+
+exports.deleteAttendance = async(req,res)=>{
+    try{
+        let userId = req.params.userId
+        let deleteRes = await Attendance.findByIdAndDelete(userId);
+        return res.status(200).send(deleteRes)
+    }
+    catch(err)
+    {
+        return res.status(400).send(err.message)
+    }
+
+}
+
+exports.getAttWithDate = async (req,res)=>{
+
+    try{
+        let date = req.params.date
+        console.log(date)
+        let startDate = date+'T00:00:00.000+00:00'
+        let endDate = date+'T23:59:59.999+00:00'
+        
+        let users = await Attendance.find({
+            $and: [
+                { attendanceDate: { $gte: startDate } },
+                { attendanceDate: { $lte: endDate } }
+            ]
+        }).sort({ attendanceDate: -1 });
+        users = users.map(user => {
+            return {
+                ...user._doc,
+                attendanceDate: user.attendanceDate .toISOString().split('T')[0],
+                memberShipStart: user.memberShipStart.toISOString().split('T')[0],
+                memberShipEnd: user.memberShipEnd.toISOString().split('T')[0],
+                EntryTime: user.attendanceDate .toISOString().split('T')[1].split('.')[0],
+            };
+        });
+        return res.status(200).send({users:users})
+    }
+    catch(err){
+        return res.status(400).send({msg: "something went wrong"})
+    }
+}
+
+exports.membershiunpaid = async (req,res)=>{
+
+    try{
+        let today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+        let users = await User.find({
+            memberShipEnd: { $lt: today }
+        }).sort({ memberShipEnd: -1 });
+
+        users = users.map(user => {
+            return {
+                ...user._doc,
+                memberShipStart:  moment(user.memberShipStart).format('YYYY-MM-DD'),
+                memberShipEnd:  moment(user.memberShipEnd).format('YYYY-MM-DD'),
+            };
+        });
+        
+        return res.status(201).send({users})        
+    }
+    catch(err)
+    {
+        return res.status(500).send({type: "errmsg", msg: err?.message || "something went wrong "});      
+    }
+}
+
+exports.membershipaid = async (req,res)=>{
+
+    try{
+        let today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+        let users = await User.find({
+            memberShipEnd: { $gte: today }
+        }).sort({ memberShipEnd: -1 });
+
+        users = users.map(user => {
+            return {
+                ...user._doc,
+                memberShipStart:  moment(user.memberShipStart).format('YYYY-MM-DD'),
+                memberShipEnd:  moment(user.memberShipEnd).format('YYYY-MM-DD'),
+            };
+        });
+        
+        return res.status(201).send({users})
+    }
+    catch(err)
+    {
+        return res.status(500).send({type: "errmsg", msg: err?.message || "something went wrong "});       
+    }
+}
+
+exports.unsubcribePlan = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        let userDetails = await User.findOne({ _id: userId });
+
+        if (userDetails == null)
+            return res.status(500).send({ type: "errmsg", msg: "Wrong id" });
+
+        console.log(userDetails.memberShipEnd);
+
+        // Calculate yesterday's date
+        const yesterday = moment().subtract(1, 'day').toDate();
+
+        const updatedUser = await User.findByIdAndUpdate(userId, {
+            $set: {
+                fullName: userDetails.fullName,
+                image: userDetails.image,
+                phone: userDetails.phone,
+                memberShipStart: userDetails.memberShipStart,
+                memberShipEnd: yesterday, // Update membershipEnd to yesterday
+                pack: 0
+            }
+        }, { new: true });
+
+        return res.status(200).send({ updatedUser });
+    } catch (err) {
+        return res.status(400).send(err.message);
+    }
+}
+
+
+
