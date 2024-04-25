@@ -3,18 +3,15 @@
     "version": 2,
     "builds": [
       {
-        "src": "app.js", 
+        "src": "./index.js", 
         "use": "@vercel/node" 
       }
     ],
     "routes": [
       {
         "src": "/(.*)", 
-        "dest": "/app.js" 
+        "dest": "/" 
       }
-    ],
-    "env": {
-      "MONGODB_URI": "mongodb://localhost:27017" 
-    }
+    ]
   }
   
