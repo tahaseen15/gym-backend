@@ -13,7 +13,7 @@
     app.use('/userimages', express.static(userImagePath));
 
     try {
-        mongoose.connect("mongodb+srv://syed123tahaseen:GyHrp9cPze5KB9lr@gymmongodb.kfwaovz.mongodb.net/?retryWrites=true&w=majority&appName=gymmongodb");
+        mongoose.connect("mongodb+srv://syed123tahaseen:GyHrp9cPze5KB9lr@gymmongodb.kfwaovz.mongodb.net/gym?retryWrites=true&w=majority&appName=gymmongodb");
         console.log("connected to db");
     } catch (error) {
         console.log('unhandledRejection', error.message);   
