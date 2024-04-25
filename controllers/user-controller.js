@@ -141,6 +141,7 @@ exports.getAllUsers = async(req,res)=>{
 
     try{
         let allUsers = await User.find().sort({ memberShipStart: -1 }).lean()
+        console.log(process.env.MONGODB_CONNECT_URI);
         allUsers = allUsers.map(user => {
             return {
                 ...user,
