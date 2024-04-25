@@ -13,7 +13,7 @@
     app.use('/userimages', express.static(userImagePath));
 
     try {
-        mongoose.connect(process.env.MONGODB_CONNECT_URI);
+        mongoose.connect("mongodb+srv://syed123tahaseen:<password>@gymmongodb.kfwaovz.mongodb.net/?retryWrites=true&w=majority&appName=gymmongodb");
         console.log("connected to db");
     } catch (error) {
         console.log('unhandledRejection', error.message);   
