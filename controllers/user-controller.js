@@ -26,7 +26,8 @@ exports.create_user = async(req,res)=>{
             phone: req.body.phone,
             memberShipStart: memberShipStart,
             memberShipEnd: memberShipEnd,
-            image: process.env.USER_IMAGES_URL+imageName,
+            // image: process.env.USER_IMAGES_URL+imageName,
+            image: "http://localhost:8000/userimages/"+imageName,
             pack:pack,
             memberShipNum
         })
@@ -73,7 +74,8 @@ exports.updateUser = async (req, res) => {
                     memberShipStart: memberShipStart,
                     memberShipEnd: memberShipEnd,
                     memberShipNum,
-                    image: process.env.USER_IMAGES_URL+imageName,
+                    // image: process.env.USER_IMAGES_URL+imageName,
+                    image: "http://localhost:8000/userimages/"+imageName,
                     pack: req.body.pack
                 }
             }, { new: true });
