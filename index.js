@@ -12,6 +12,12 @@
     const userImagePath = path.join(__dirname,"./user_images/")
     app.use('/userimages', express.static(userImagePath));
 
+    // try {
+    //     mongoose.connect("mongodb://localhost:27017/gym");
+    //     console.log("connected to db");
+    // } catch (error) {
+    //     console.log('unhandledRejection', error.message);   
+    // }
     try {
         mongoose.connect("mongodb+srv://syed123tahaseen:GyHrp9cPze5KB9lr@gymmongodb.kfwaovz.mongodb.net/gym?retryWrites=true&w=majority&appName=gymmongodb");
         console.log("connected to db");

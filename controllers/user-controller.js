@@ -1,9 +1,83 @@
 let User = require('../models/userModel');
 let Attendance = require('../models/attendanceModel')
 const fs = require('fs');
+var jwt = require("jsonwebtoken");
+const argon2 = require('argon2');
 const path = require('path');
 const userImagePath = path.join(__dirname,"../user_images/")
-const moment = require('moment')
+const moment = require('moment');
+const Admin = require('../models/adminModel');
+
+exports.signin = async (req,res) => {
+ 
+    try {
+        const admin = await Admin.findOne({});
+        if(!admin) {
+            return res.status(404)
+                .send({
+                    message: "User not found."
+                });
+        }
+        var passwordIsValid = await argon2.verify(admin.password, req.body.password)
+ 
+        if (!passwordIsValid) {
+            return res.status(401)
+            .send({
+                accessToken: null,
+                message: "Invalid Password" 
+            });
+ 
+        }
+
+        var token = jwt.sign({
+            id: admin.id
+        }, process.env.API_SECRET, {
+            expiresIn: 86400
+        });
+ 
+        res.status(200)
+        .send({
+            message: "Login successful",
+            accessToken: token
+        });
+ 
+} catch (err) {
+    console.log(err);
+    res.status(500)
+    .send({
+        message: err
+    });
+    return;
+    }
+}
+
+exports.signup = async (req,res) => {
+    try{
+        
+        const secretKey = req.body.secretKey
+        if(secretKey!==process.env.SECRET_KEY)
+        {
+            return res.status(500).send({msg: "wrong secretKey"});
+        }
+        const password = await argon2.hash(req.body.password)
+        const admin = new Admin({
+            userName: req.body.userName,
+            password:password,
+        });
+ 
+        await admin.save();
+        return res.status(200)
+            .send({
+                message: "User Registered Successfully"
+            })
+    } catch (err) {
+        if (err.code === 11000 && err.keyPattern && err.keyPattern.userName) {
+            return res.status(400).send({msg: "Admin already exist" });
+        }
+        return res.status(500).send({type: "errmsg",msg:err});
+                    
+    }
+};
 
 exports.create_user = async(req,res)=>{
     try{
@@ -141,7 +215,6 @@ exports.getAllUsers = async(req,res)=>{
 
     try{
         let allUsers = await User.find().sort({ memberShipStart: -1 }).lean()
-        console.log(process.env.MONGODB_CONNECT_URI);
         allUsers = allUsers.map(user => {
             return {
                 ...user,
@@ -352,7 +425,6 @@ exports.getAttWithDate = async (req,res)=>{
 
     try{
         let date = req.params.date
-        console.log(date)
         let startDate = date+'T00:00:00.000+00:00'
         let endDate = date+'T23:59:59.999+00:00'
         
@@ -436,7 +508,6 @@ exports.unsubcribePlan = async (req, res) => {
         if (userDetails == null)
             return res.status(500).send({ type: "errmsg", msg: "Wrong id" });
 
-        console.log(userDetails.memberShipEnd);
 
         // Calculate yesterday's date
         const yesterday = moment().subtract(1, 'day').toDate();

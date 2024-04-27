@@ -1,5 +1,5 @@
 const jwt=require('jsonwebtoken');
-const User=require("../models/user")
+const Admin=require("../models/adminModel")
  
 const verifyToken=(req,res,next)=>{
     if(req.headers && req.headers.authorization && req.headers.authorization.split(' ')[0]==='JWT'){
@@ -9,7 +9,7 @@ const verifyToken=(req,res,next)=>{
                 req.user=undefined;
             }
             try{
-                const user=await User.findOne({
+                const user=await Admin.findOne({
                     _id:decode.id
                 });
                 req.user=user;
