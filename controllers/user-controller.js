@@ -98,6 +98,82 @@ const giveCurrentDateTime = () => {
 };
 
 
+
+exports.updateUser = async (req, res) => {
+    try {
+
+        
+        const userId = req.params.userId; 
+
+        const memberShipStart = req.body.memberShipStart;
+        const pack = req.body.pack;
+        const memberShipEnd = moment(memberShipStart).add(pack, 'months').toDate();
+        const memberShipNum = req.body.memberShipNum;
+        let updatedUser = null
+
+        if(req.file)
+        {
+            const fileSize = req.file.size;
+            const maxSize = 1024 * 1024; // 1MB in bytes
+            const minSize = 50 * 1024; // 50KB in bytes
+            if (fileSize > maxSize) {
+                return res.status(400).send({ type: 'eImage', msg: "Image size should be less than 1MB" });
+            } else if (fileSize < minSize) {
+                return res.status(400).send({ type: 'eImage', msg: "Image size should be at least 50KB" });
+            }
+            const dateTime = giveCurrentDateTime();
+            const storageRef = ref(storage, `files/${req.file.originalname + "       " + dateTime}`);
+            const metadata = {
+                contentType: req.file.mimetype,
+            };
+            const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            updatedUser = await User.findByIdAndUpdate(userId, {
+                $set: {
+                    fullName: req.body.fullName,
+                    phone: req.body.phone,
+                    memberShipStart: memberShipStart,
+                    memberShipEnd: memberShipEnd,
+                    memberShipNum,
+                    image: downloadURL,
+                    pack: req.body.pack
+                }
+            }, { new: true });
+    
+
+        }
+        else 
+        {
+            updatedUser = await User.findByIdAndUpdate(userId, {
+                $set: {
+                    fullName: req.body.fullName,
+                    phone: req.body.phone,
+                    memberShipStart: memberShipStart,
+                    memberShipEnd: memberShipEnd,
+                    memberShipNum,
+                    pack: req.body.pack
+                }
+            }, { new: true });
+    
+        }
+        
+        if (!updatedUser) {
+            return res.status(404).send({ type: "error", msg: "User not found" });
+        }
+
+        return res.status(200).send({ type: "success", msg: "User updated successfully", user: updatedUser });
+    } catch (err) {
+        if (err.code === 11000 && err.keyPattern && err.keyPattern.phone) {
+            return res.status(400).send({ type: "ePhone", msg: "Phone number already exists!! change number" });
+        } else {
+            return res.status(500).send({ type: "errmsg", msg: err.message });
+        }
+    }
+}
+
+
+
 exports.create_user = async (req, res) => {
     try {
         if (!req.file) {
@@ -148,70 +224,6 @@ exports.create_user = async (req, res) => {
         }
     }
 };
-
-exports.updateUser = async (req, res) => {
-    try {
-
-        let imageName = ''
-        
-        const userId = req.params.userId; // Assuming userId is passed in the request parameters
-
-        const memberShipStart = req.body.memberShipStart;
-        const pack = req.body.pack;
-        const memberShipEnd = moment(memberShipStart).add(pack, 'months').toDate();
-        const memberShipNum = req.body.memberShipNum;
-
-        let updatedUser = null
-        if(req.file)
-        {
-            const imageBuffer = req.file.buffer
-            imageName = Date.now()+"-"+req.file.originalname
-            fs.writeFileSync(userImagePath+imageName,imageBuffer)
-
-            updatedUser = await User.findByIdAndUpdate(userId, {
-                $set: {
-                    fullName: req.body.fullName,
-                    phone: req.body.phone,
-                    memberShipStart: memberShipStart,
-                    memberShipEnd: memberShipEnd,
-                    memberShipNum,
-                    // image: process.env.USER_IMAGES_URL+imageName,
-                    image: "http://localhost:8000/userimages/"+imageName,
-                    pack: req.body.pack
-                }
-            }, { new: true });
-    
-
-        }
-        else 
-        {
-            updatedUser = await User.findByIdAndUpdate(userId, {
-                $set: {
-                    fullName: req.body.fullName,
-                    phone: req.body.phone,
-                    memberShipStart: memberShipStart,
-                    memberShipEnd: memberShipEnd,
-                    memberShipNum,
-                    pack: req.body.pack
-                }
-            }, { new: true });
-    
-        }
-
-        
-        if (!updatedUser) {
-            return res.status(404).send({ type: "error", msg: "User not found" });
-        }
-
-        return res.status(200).send({ type: "success", msg: "User updated successfully", user: updatedUser });
-    } catch (err) {
-        if (err.code === 11000 && err.keyPattern && err.keyPattern.phone) {
-            return res.status(400).send({ type: "ePhone", msg: "Phone number already exists!! change number" });
-        } else {
-            return res.status(500).send({ type: "errmsg", msg: err.message });
-        }
-    }
-}
 
 
 exports.getUserWithId = async (req, res) => {

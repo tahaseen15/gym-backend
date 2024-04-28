@@ -31,10 +31,10 @@ const verifyToken = require("../middlewares/authJWT.js");
 
 
 router.post("/create-user", verifyToken,upload.single("image"), create_user);
+router.patch('/update-user/:userId',verifyToken,upload.single('image'),updateUser)
 router.get('/getUser/:userId',verifyToken,getUserWithId)
 router.get('/getUserWithPhone/:userId/:type',verifyToken,getUserWithPhone)
 router.delete('/deleteUser/:userId',verifyToken,deleteUser)
-router.patch('/update-user/:userId',verifyToken,upload.single('image'),updateUser)
 router.get('/getAllUsers',verifyToken,getAllUsers)
 router.post('/gym-attendance',verifyToken,markAttendance)
 router.delete('/gym-attendance/:userId',verifyToken,deleteAttendance)
