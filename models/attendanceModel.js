@@ -13,7 +13,7 @@ let attendanceShema = new Schema({
     },
     image:{
         type:String,
-        required:[true,"please provide image"]
+        // required:[true,"please provide image"]
     },
     memberShipStart:{
         type: Date,

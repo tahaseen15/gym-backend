@@ -101,7 +101,7 @@ exports.create_user = async(req,res)=>{
             memberShipStart: memberShipStart,
             memberShipEnd: memberShipEnd,
             // image: process.env.USER_IMAGES_URL+imageName,
-            image: "http://localhost:8000/userimages/"+imageName,
+            // image: "http://localhost:8000/userimages/"+imageName,
             pack:pack,
             memberShipNum
         })
