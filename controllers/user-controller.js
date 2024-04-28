@@ -82,12 +82,12 @@ exports.signup = async (req,res) => {
 exports.create_user = async(req,res)=>{
     try{
 
-        if(!req.file)
-            return res.status(400).send({type:'eImage', msg: "image should be uploaded"})
+        // if(!req.file)
+        //     return res.status(400).send({type:'eImage', msg: "image should be uploaded"})
 
-        const imageBuffer = req.file.buffer
-        const imageName = Date.now()+"-"+req.file.originalname
-        fs.writeFileSync(userImagePath+imageName,imageBuffer)
+        // const imageBuffer = req.file.buffer
+        // const imageName = Date.now()+"-"+req.file.originalname
+        // fs.writeFileSync(userImagePath+imageName,imageBuffer)
 
         const memberShipStart = req.body.memberShipStart;
         const pack = req.body.pack;
