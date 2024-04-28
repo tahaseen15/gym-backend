@@ -19,7 +19,7 @@
     //     console.log('unhandledRejection', error.message);   
     // }
     try {
-        mongoose.connect("mongodb+srv://syed123tahaseen:GyHrp9cPze5KB9lr@gymmongodb.kfwaovz.mongodb.net/gym?retryWrites=true&w=majority&appName=gymmongodb");
+        mongoose.connect(process.env.MONGODB_CONNECT_URI);
         console.log("connected to db");
     } catch (error) {
         console.log('unhandledRejection', error.message);   

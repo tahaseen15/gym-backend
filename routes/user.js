@@ -1,6 +1,5 @@
 const express = require('express')
 const router = express.Router()
-
 const {create_user,membershipaid,
     membershiunpaid,markAttendance,
     getTodayAttendance, getAllUsers, 
@@ -9,14 +8,29 @@ const {create_user,membershipaid,
     signup,
 } = require("../controllers/user-controller")
 
+
+// 
+
+const { initializeApp } = require("firebase/app");
+const { getStorage, ref, getDownloadURL, uploadBytesResumable } = require("firebase/storage");
+const multer = require("multer");
+const config = require("../config/firebase.config.js");
+
+initializeApp(config.firebaseConfig);
+const storage = getStorage();
+const upload = multer({ storage: multer.memoryStorage() });
+
+
+
 const verifyToken = require("../middlewares/authJWT.js");
+// const multer = require('multer')
+// const storage = multer.memoryStorage();
+// const upload = multer({storage:storage})
 
-const multer = require('multer')
-const storage = multer.memoryStorage();
-const upload = multer({storage:storage})
 
 
-router.post('/create-user',verifyToken,upload.single('image'),create_user)
+
+router.post("/create-user", verifyToken,upload.single("image"), create_user);
 router.get('/getUser/:userId',verifyToken,getUserWithId)
 router.get('/getUserWithPhone/:userId/:type',verifyToken,getUserWithPhone)
 router.delete('/deleteUser/:userId',verifyToken,deleteUser)

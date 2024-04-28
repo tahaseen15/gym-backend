@@ -7,6 +7,15 @@ const path = require('path');
 const userImagePath = path.join(__dirname,"../user_images/")
 const moment = require('moment');
 const Admin = require('../models/adminModel');
+const { getStorage, ref, getDownloadURL, uploadBytesResumable } = require("firebase/storage");
+const { initializeApp } = require("firebase/app");
+const config = require("../config/firebase.config.js");
+
+
+initializeApp(config.firebaseConfig);
+const storage = getStorage();
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage() });
 
 exports.signin = async (req,res) => {
  
@@ -80,48 +89,65 @@ exports.signup = async (req,res) => {
     }
 };
 
-exports.create_user = async(req,res)=>{
-    try{
+const giveCurrentDateTime = () => {
+    const today = new Date();
+    const date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+    const time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+    const dateTime = date + ' ' + time;
+    return dateTime;
+};
 
-        // if(!req.file)
-        //     return res.status(400).send({type:'eImage', msg: "image should be uploaded"})
 
-        // const imageBuffer = req.file.buffer
-        // const imageName = Date.now()+"-"+req.file.originalname
-        // fs.writeFileSync(userImagePath+imageName,imageBuffer)
+exports.create_user = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).send({ type: 'eImage', msg: "Image should be uploaded" });
+        }
+        const fileSize = req.file.size;
+        const maxSize = 1024 * 1024; // 1MB in bytes
+        const minSize = 50 * 1024; // 50KB in bytes
+        if (fileSize > maxSize) {
+            return res.status(400).send({ type: 'eImage', msg: "Image size should be less than 1MB" });
+        } else if (fileSize < minSize) {
+            return res.status(400).send({ type: 'eImage', msg: "Image size should be at least 50KB" });
+        }
+        const dateTime = giveCurrentDateTime();
+        const storageRef = ref(storage, `files/${req.file.originalname + "       " + dateTime}`);
+        const metadata = {
+            contentType: req.file.mimetype,
+        };
+        const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
+        const downloadURL = await getDownloadURL(snapshot.ref);
 
         const memberShipStart = req.body.memberShipStart;
         const pack = req.body.pack;
         const memberShipEnd = moment(memberShipStart).add(pack, 'months').toDate();
         const memberShipNum = req.body.memberShipNum;
 
-
         const user = new User({
             fullName: req.body.fullName,
             phone: req.body.phone,
             memberShipStart: memberShipStart,
             memberShipEnd: memberShipEnd,
-            // image: process.env.USER_IMAGES_URL+imageName,
-            // image: "http://localhost:8000/userimages/"+imageName,
-            pack:pack,
+            image: downloadURL,
+            pack: pack,
             memberShipNum
-        })
+        });
 
         await user.save();
 
-        return res.status(201).send({type: "success", msg:"user created successfully"})
-        
-    }
-    catch (err) {
+        return res.status(201).send({ type: "success", msg: "User created successfully" });
+    } catch (err) {
         if (err.code === 11000 && err.keyPattern && err.keyPattern.phone) {
-            return res.status(400).send({type: "ePhone",  msg: "phone number already exist" });
+            return res.status(400).send({ type: "ePhone", msg: "Phone number already exists" });
         } else if (err.code === 11000 && err.keyPattern && err.keyPattern.memberShipNum) {
-            return res.status(400).send({type: "eNum",  msg: "phone number already exist" });
+            return res.status(400).send({ type: "eNum", msg: "Membership number already exists" });
         } else {
-            return res.status(500).send({type: "errmsg",msg:err});
+            console.log(err);
+            return res.status(500).send({ type: "errmsg", msg: err });
         }
     }
-}
+};
 
 exports.updateUser = async (req, res) => {
     try {
