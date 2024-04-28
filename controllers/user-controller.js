@@ -11,11 +11,12 @@ const Admin = require('../models/adminModel');
 exports.signin = async (req,res) => {
  
     try {
-        const admin = await Admin.findOne({});
+    
+        const admin = await Admin.findOne({userName:req.body.userName});
         if(!admin) {
             return res.status(404)
                 .send({
-                    message: "User not found."
+                    msg: "User not found."
                 });
         }
         var passwordIsValid = await argon2.verify(admin.password, req.body.password)
@@ -24,7 +25,7 @@ exports.signin = async (req,res) => {
             return res.status(401)
             .send({
                 accessToken: null,
-                message: "Invalid Password" 
+                msg: "Invalid Password" 
             });
  
         }
