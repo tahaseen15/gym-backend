@@ -165,9 +165,12 @@ exports.updateUser = async (req, res) => {
         return res.status(200).send({ type: "success", msg: "User updated successfully", user: updatedUser });
     } catch (err) {
         if (err.code === 11000 && err.keyPattern && err.keyPattern.phone) {
-            return res.status(400).send({ type: "ePhone", msg: "Phone number already exists!! change number" });
+            return res.status(400).send({ type: "ePhone", msg: "Phone number already exists" });
+        } else if (err.code === 11000 && err.keyPattern && err.keyPattern.memberShipNum) {
+            return res.status(400).send({ type: "eNum", msg: "Membership number already exists" });
         } else {
-            return res.status(500).send({ type: "errmsg", msg: err.message });
+            console.log(err);
+            return res.status(500).send({ type: "errmsg", msg: err });
         }
     }
 }
