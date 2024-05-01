@@ -12,18 +12,18 @@
     const userImagePath = path.join(__dirname,"./user_images/")
     app.use('/userimages', express.static(userImagePath));
 
-    try {
-        mongoose.connect("mongodb://localhost:27017/gym");
-        console.log("connected to db");
-    } catch (error) {
-        console.log('unhandledRejection', error.message);   
-    }
     // try {
-    //     mongoose.connect(process.env.MONGODB_CONNECT_URI);
+    //     mongoose.connect("mongodb://localhost:27017/gym");
     //     console.log("connected to db");
     // } catch (error) {
     //     console.log('unhandledRejection', error.message);   
     // }
+    try {
+        mongoose.connect(process.env.MONGODB_CONNECT_URI);
+        console.log("connected to db");
+    } catch (error) {
+        console.log('unhandledRejection', error.message);   
+    }
 
     app.use(express.json())
     app.use(express.urlencoded({
