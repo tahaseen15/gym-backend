@@ -365,14 +365,6 @@ exports.markAttendance = async (req,res)=>{
         let today = new Date();
         today.setUTCHours(0, 0, 0, 0);
 
-        // let checkPlan = await User.findOne({
-        //     $and: [
-        //         { phone: phoneNo },
-        //         { memberShipEnd: { $lt: today } }
-        //     ]
-        // });
-
-        // console.log(checkPlan)
         let date = moment().format()
         let currDate = date.toString().split('T')[0] + 'T00:00:00.000+00:00'
 
@@ -387,9 +379,9 @@ exports.markAttendance = async (req,res)=>{
         if(attn)
             return res.status(400).send({type: "ePhone",  msg: "Attendance already taken" });
         
-        let localTime = moment().format()
+        let localTime = moment().utcOffset('+05:30').format();
         localTime = localTime.toString().split('+')[0] + '.000+00:00' //give local time exactly
-        
+        console.log(localTime)
         let attendance = new Attendance({
             fullName: existingUser.fullName,
             phone: existingUser.phone,

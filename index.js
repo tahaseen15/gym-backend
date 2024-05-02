@@ -20,7 +20,7 @@
     // }
 
     try {
-        
+
         mongoose.connect(process.env.MONGODB_CONNECT_URI);
         console.log("connected to db");
     } catch (error) {
