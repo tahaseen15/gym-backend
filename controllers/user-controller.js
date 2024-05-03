@@ -256,7 +256,7 @@ exports.getUserWithId = async (req, res) => {
 exports.getAllUsers = async(req,res)=>{
 
     try{
-        let allUsers = await User.find().sort({ memberShipStart: -1 }).lean()
+        let allUsers = await User.find().sort({memberShipNum: -1 }).lean()
         allUsers = allUsers.map(user => {
             return {
                 ...user,
